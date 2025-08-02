@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日志查询系统</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- DateRangePicker CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-search me-2"></i>日志查询系统
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="refresh-btn">
+                            <i class="bi bi-arrow-clockwise me-1"></i>刷新
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="import-btn">
+                        <!--    <i class="bi bi-upload me-1"></i>导入 -->
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="export-btn">
+                            <i class="bi bi-download me-1"></i>导出
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container-fluid mt-4">
+        <!-- 统计信息卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">总日志数</h5>
+                        <h2 class="card-text" id="total-logs">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">成功日志</h5>
+                        <h2 class="card-text text-success" id="success-logs">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">失败日志</h5>
+                        <h2 class="card-text text-danger" id="failed-logs">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">总传输量</h5>
+                        <h2 class="card-text" id="total-size">0B</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选区域 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card filter-section">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <label for="status-filter" class="form-label">状态</label>
+                                <select class="form-select" id="status-filter">
+                                    <option value="all" selected>全部</option>
+                                    <option value="success">成功</option>
+                                    <option value="failed">失败</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="size-filter" class="form-label">文件大小</label>
+                                <select class="form-select" id="size-filter">
+                                    <option value="all" selected>全部</option>
+                                    <option value="0-1MB">0-1MB</option>
+                                    <option value="1-10MB">1-10MB</option>
+                                    <option value="10-100MB">10-100MB</option>
+                                    <option value="100MB+">100MB+</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="time-filter" class="form-label">耗时</label>
+                                <select class="form-select" id="time-filter">
+                                    <option value="all" selected>全部</option>
+                                    <option value="0-100ms">0-100ms</option>
+                                    <option value="100-500ms">100-500ms</option>
+                                    <option value="500ms+">500ms+</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="date-range" class="form-label">日期范围</label>
+                                <input type="text" class="form-control date-range-picker" id="date-range" placeholder="选择日期范围">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="search-input" class="form-label">搜索</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="search-input" placeholder="输入关键词搜索">
+                                    <button class="btn btn-primary" type="button" id="search-btn">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结果区域 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <!-- 加载中提示 -->
+                        <div id="loading" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-2">正在加载数据，请稍候...</p>
+                        </div>
+
+                        <!-- 无结果提示 -->
+                        <div id="no-results" class="text-center py-5 d-none">
+                            <i class="bi bi-search" style="font-size: 3rem;"></i>
+                            <p class="mt-2">没有找到匹配的日志记录</p>
+                        </div>
+
+                        <!-- 结果表格 -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" data-column="status">状态</th>
+                                        <th class="sortable" data-column="timestamp">时间</th>
+                                        <th class="sortable" data-column="fileSize">文件大小</th>
+                                        <th class="sortable" data-column="srcPath">源路径</th>
+                                        <th class="sortable" data-column="dstPath">目标路径</th>
+                                        <th class="sortable" data-column="cost">耗时</th>
+                                        <th class="sortable" data-column="statusCode">状态码</th>
+                                       <!-- <th class="sortable" data-column="logFile">日志文件</th> -->
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-body">
+                                    <!-- 结果行将通过JavaScript动态添加 -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 分页控件 -->
+                        <div id="pagination-container" class="d-flex justify-content-center mt-4 d-none">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination" id="pagination">
+                                    <!-- 分页按钮将通过JavaScript动态添加 -->
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情模态框 -->
+    <div class="modal fade" id="detail-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">日志详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="detail-content">
+                    <!-- 详情内容将通过JavaScript动态添加 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 导入模态框 -->
+    <div class="modal fade" id="import-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">导入日志文件</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="log-file-select" class="form-label">选择日志文件</label>
+                        <select class="form-select" id="log-file-select">
+                            <option value="" selected disabled>请选择日志文件</option>
+                            <!-- 日志文件选项将通过JavaScript动态添加 -->
+                        </select>
+                    </div>
+                    <div id="import-status" class="alert alert-info d-none">
+                        <!-- 导入状态将通过JavaScript动态添加 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" id="import-selected-btn">导入选中文件</button>
+                    <button type="button" class="btn btn-success" id="import-all-btn">导入所有文件</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Moment.js -->
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <!-- DateRangePicker JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <!-- 自定义脚本 -->
+    <script src="js/main.js"></script>
+</body>
+</html>
